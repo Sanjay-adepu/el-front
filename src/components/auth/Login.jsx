@@ -1,140 +1,148 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import {
-  Box,
-  Paper,
-  TextField,
-  Button,
-  Typography,
-  Container,
-  Avatar,
-  Alert,
-  CircularProgress,
-} from '@mui/material';
-import { School as SchoolIcon } from '@mui/icons-material';
-import { useAuth } from '../../context/AuthContext';
+import React, { useEffect, useState } from "react";
 
-const Login = () => {
-  const [formData, setFormData] = useState({
-    name: '',
-    password: '',
-  });
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  
-  const { login } = useAuth();
-  const navigate = useNavigate();
+export default function Assignments() {
+  const [assignments, setAssignments] = useState([]);
+  const [selectedSub, setSelectedSub] = useState(null);
 
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
-    setError('');
-  };
+  useEffect(() => {
+    fetch("https://el-backend-ashen.vercel.app/admin/assignments")
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setAssignments(data);
+        } else {
+          setAssignments([data]);
+        }
+      })
+      .catch((err) => console.error("Error fetching assignments:", err));
+  }, []);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-
-    try {
-      const user = await login(formData.name, formData.password);
-      
-      // Redirect based on user role
-      if (user.role === 'admin') {
-        navigate('/admin/dashboard');
-      } else {
-        navigate('/student/dashboard');
-      }
-    } catch (error) {
-      setError(error.response?.data?.message || 'Login failed. Please try again.');
-    } finally {
-      setLoading(false);
-    }
+  const handleSelectSubmodule = (sub) => {
+    setSelectedSub(sub);
   };
 
   return (
-    <Container component="main" maxWidth="xs">
-      <Box
-        sx={{
-          marginTop: 8,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
+    <div style={{ display: "flex", height: "100vh", fontFamily: "sans-serif" }}>
+      {/* Sidebar */}
+      <div
+        style={{
+          width: "220px",
+          borderRight: "1px solid #ddd",
+          padding: "10px",
+          background: "#f8f8f8",
         }}
       >
-        <Paper
-          elevation={3}
-          sx={{
-            padding: 4,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            width: '100%',
-          }}
-        >
-          <Avatar sx={{ m: 1, bgcolor: 'primary.main', width: 56, height: 56 }}>
-            <SchoolIcon sx={{ fontSize: 32 }} />
-          </Avatar>
-          
-          <Typography component="h1" variant="h4" sx={{ mb: 3, fontWeight: 600 }}>
-            Medical Coding Platform
-          </Typography>
-          
-          <Typography component="h2" variant="h6" sx={{ mb: 3, color: 'text.secondary' }}>
-            Sign in to your account
-          </Typography>
-
-          {error && (
-            <Alert severity="error" sx={{ width: '100%', mb: 2 }}>
-              {error}
-            </Alert>
-          )}
-
-          <Box component="form" onSubmit={handleSubmit} sx={{ width: '100%' }}>
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              id="name"
-              label="Username"
-              name="name"
-              autoComplete="username"
-              autoFocus
-              value={formData.name}
-              onChange={handleChange}
-              disabled={loading}
-            />
-            
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              name="password"
-              label="Password"
-              type="password"
-              id="password"
-              autoComplete="current-password"
-              value={formData.password}
-              onChange={handleChange}
-              disabled={loading}
-            />
-            
-            <Button
-              type="submit"
-              fullWidth
-              variant="contained"
-              sx={{ mt: 3, mb: 2, py: 1.5 }}
-              disabled={loading}
+        <h3>Submodules</h3>
+        {assignments.flatMap((module) =>
+          module.subAssignments.map((sub) => (
+            <div
+              key={sub._id}
+              style={{
+                padding: "8px",
+                margin: "5px 0",
+                cursor: "pointer",
+                background:
+                  selectedSub && selectedSub._id === sub._id
+                    ? "#e0e0e0"
+                    : "#fff",
+                borderRadius: "4px",
+                border: "1px solid #ccc",
+              }}
+              onClick={() => handleSelectSubmodule(sub)}
             >
-              {loading ? <CircularProgress size={24} /> : 'Sign In'}
-            </Button>
-          </Box>
-        </Paper>
-      </Box>
-    </Container>
-  );
-};
+              {sub.subModuleName}
+            </div>
+          ))
+        )}
+      </div>
 
-export default Login;
+      {/* Main Content */}
+      <div style={{ flex: 1, padding: "20px" }}>
+        {selectedSub ? (
+          <div style={{ display: "flex", gap: "20px" }}>
+            {/* PDF Viewer */}
+            <div style={{ flex: 2 }}>
+              <h3>PDF Viewer</h3>
+              <iframe
+                src={`https://docs.google.com/viewer?url=${encodeURIComponent(
+                  selectedSub.assignmentPdf
+                )}&embedded=true`}
+                title="Assignment PDF"
+                width="100%"
+                height="500px"
+                style={{ border: "1px solid #ccc" }}
+              ></iframe>
+            </div>
+
+            {/* Form */}
+            <div style={{ flex: 1 }}>
+              <h3>Patient Details</h3>
+              <div style={{ marginBottom: "10px" }}>
+                <label>Age / DOB</label>
+                <input
+                  type="text"
+                  style={{ width: "100%", padding: "6px", marginTop: "4px" }}
+                />
+              </div>
+              <div style={{ marginBottom: "10px" }}>
+                <label>ICD-10 Codes</label>
+                <input
+                  type="text"
+                  style={{ width: "100%", padding: "6px", marginTop: "4px" }}
+                />
+              </div>
+              <div style={{ marginBottom: "10px" }}>
+                <label>CPT Codes</label>
+                <input
+                  type="text"
+                  style={{ width: "100%", padding: "6px", marginTop: "4px" }}
+                />
+              </div>
+              <div style={{ marginBottom: "10px" }}>
+                <label>Notes</label>
+                <textarea
+                  style={{
+                    width: "100%",
+                    padding: "6px",
+                    marginTop: "4px",
+                    height: "80px",
+                  }}
+                ></textarea>
+              </div>
+              <div style={{ display: "flex", gap: "10px" }}>
+                <button
+                  style={{
+                    flex: 1,
+                    padding: "8px",
+                    background: "#007bff",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: "4px",
+                    cursor: "pointer",
+                  }}
+                >
+                  Submit
+                </button>
+                <button
+                  style={{
+                    flex: 1,
+                    padding: "8px",
+                    background: "#6c757d",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: "4px",
+                    cursor: "pointer",
+                  }}
+                >
+                  Send to Audit
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <p>Select a submodule to view details</p>
+        )}
+      </div>
+    </div>
+  );
+}
