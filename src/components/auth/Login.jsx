@@ -1,148 +1,114 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
 
-export default function Assignments() {
-  const [assignments, setAssignments] = useState([]);
-  const [selectedSub, setSelectedSub] = useState(null);
+const Login = () => {
+  const [name, setName] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const navigate = useNavigate();
 
-  useEffect(() => {
-    fetch("https://el-backend-ashen.vercel.app/admin/assignments")
-      .then((res) => res.json())
-      .then((data) => {
-        if (Array.isArray(data)) {
-          setAssignments(data);
+  const handleLogin = async (e) => {
+    e.preventDefault();
+
+    try {
+      const res = await axios.post("https://el-backend-ashen.vercel.app/login", {
+        name,
+        password,
+      });
+
+      if (res.data.success) {
+        const { role } = res.data.user;
+
+        // Store user info in localStorage (optional)
+        localStorage.setItem("user", JSON.stringify(res.data.user));
+
+        // Redirect based on role
+        if (role === "admin") {
+          navigate("/admin/dashboard");
+        } else if (role === "user") {
+          navigate("/student");
         } else {
-          setAssignments([data]);
+          setError("Invalid role assigned");
         }
-      })
-      .catch((err) => console.error("Error fetching assignments:", err));
-  }, []);
-
-  const handleSelectSubmodule = (sub) => {
-    setSelectedSub(sub);
+      } else {
+        setError(res.data.message || "Login failed");
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || "Server error");
+    }
   };
 
   return (
-    <div style={{ display: "flex", height: "100vh", fontFamily: "sans-serif" }}>
-      {/* Sidebar */}
-      <div
-        style={{
-          width: "220px",
-          borderRight: "1px solid #ddd",
-          padding: "10px",
-          background: "#f8f8f8",
-        }}
-      >
-        <h3>Submodules</h3>
-        {assignments.flatMap((module) =>
-          module.subAssignments.map((sub) => (
-            <div
-              key={sub._id}
-              style={{
-                padding: "8px",
-                margin: "5px 0",
-                cursor: "pointer",
-                background:
-                  selectedSub && selectedSub._id === sub._id
-                    ? "#e0e0e0"
-                    : "#fff",
-                borderRadius: "4px",
-                border: "1px solid #ccc",
-              }}
-              onClick={() => handleSelectSubmodule(sub)}
-            >
-              {sub.subModuleName}
-            </div>
-          ))
-        )}
-      </div>
+    <div style={styles.container}>
+      <h2 style={styles.heading}>Wellmed Medical Coding Login</h2>
+      {error && <p style={styles.error}>{error}</p>}
 
-      {/* Main Content */}
-      <div style={{ flex: 1, padding: "20px" }}>
-        {selectedSub ? (
-          <div style={{ display: "flex", gap: "20px" }}>
-            {/* PDF Viewer */}
-            <div style={{ flex: 2 }}>
-              <h3>PDF Viewer</h3>
-              <iframe
-                src={`https://docs.google.com/viewer?url=${encodeURIComponent(
-                  selectedSub.assignmentPdf
-                )}&embedded=true`}
-                title="Assignment PDF"
-                width="100%"
-                height="500px"
-                style={{ border: "1px solid #ccc" }}
-              ></iframe>
-            </div>
+      <form onSubmit={handleLogin} style={styles.form}>
+        <input
+          type="text"
+          placeholder="Name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          style={styles.input}
+          required
+        />
 
-            {/* Form */}
-            <div style={{ flex: 1 }}>
-              <h3>Patient Details</h3>
-              <div style={{ marginBottom: "10px" }}>
-                <label>Age / DOB</label>
-                <input
-                  type="text"
-                  style={{ width: "100%", padding: "6px", marginTop: "4px" }}
-                />
-              </div>
-              <div style={{ marginBottom: "10px" }}>
-                <label>ICD-10 Codes</label>
-                <input
-                  type="text"
-                  style={{ width: "100%", padding: "6px", marginTop: "4px" }}
-                />
-              </div>
-              <div style={{ marginBottom: "10px" }}>
-                <label>CPT Codes</label>
-                <input
-                  type="text"
-                  style={{ width: "100%", padding: "6px", marginTop: "4px" }}
-                />
-              </div>
-              <div style={{ marginBottom: "10px" }}>
-                <label>Notes</label>
-                <textarea
-                  style={{
-                    width: "100%",
-                    padding: "6px",
-                    marginTop: "4px",
-                    height: "80px",
-                  }}
-                ></textarea>
-              </div>
-              <div style={{ display: "flex", gap: "10px" }}>
-                <button
-                  style={{
-                    flex: 1,
-                    padding: "8px",
-                    background: "#007bff",
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: "4px",
-                    cursor: "pointer",
-                  }}
-                >
-                  Submit
-                </button>
-                <button
-                  style={{
-                    flex: 1,
-                    padding: "8px",
-                    background: "#6c757d",
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: "4px",
-                    cursor: "pointer",
-                  }}
-                >
-                  Send to Audit
-                </button>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <p>Select a submodule to view details</p>
-        )}
-      </div>
+        <input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          style={styles.input}
+          required
+        />
+
+        <button type="submit" style={styles.button}>
+          Login
+        </button>
+      </form>
     </div>
   );
-}
+};
+
+const styles = {
+  container: {
+    maxWidth: "350px",
+    margin: "60px auto",
+    padding: "20px",
+    border: "1px solid #ccc",
+    borderRadius: "10px",
+    textAlign: "center",
+    background: "#f9f9f9",
+  },
+  heading: {
+    marginBottom: "20px",
+    color: "#333",
+  },
+  form: {
+    display: "flex",
+    flexDirection: "column",
+  },
+  input: {
+    padding: "10px",
+    margin: "8px 0",
+    borderRadius: "5px",
+    border: "1px solid #ccc",
+  },
+  button: {
+    padding: "10px",
+    marginTop: "10px",
+    backgroundColor: "#007bff",
+    color: "#fff",
+    border: "none",
+    borderRadius: "5px",
+    cursor: "pointer",
+  },
+  error: {
+    color: "red",
+    fontSize: "14px",
+    marginBottom: "10px",
+  },
+};
+
+export default Login;
